@@ -9,6 +9,12 @@ This closes that: every number lands in one Chatwoot inbox, replies go back out
 over the number the customer wrote to, and the whole thread stays in one place.
 
 Names, domains and infrastructure identifiers in this repository are fictional.
+A personal project, shared as-is; not actively supported.
+
+> **Note:** the gateway connects to WhatsApp as an unofficial WhatsApp Web
+> client, not through the official WhatsApp Business API. That is against
+> WhatsApp's terms of service and can get the connected numbers banned. Use it
+> at your own risk.
 
 ```
                   ┌───────────────┐        ┌───────────────┐
@@ -122,7 +128,8 @@ docs/                design notes — the reasoning, not the API surface
 
 ## Running it
 
-Needs Node 22+, pnpm, Docker (for the gateway), and a Chatwoot account.
+Needs Node 22+, pnpm, Docker (for the gateway), a Chatwoot account, and a
+Supabase project (the hosted database and the console's login).
 
 ```bash
 pnpm install
@@ -145,8 +152,8 @@ secret is ever hardcoded; `.env` is never committed.
 
 ```bash
 pnpm typecheck                              # both packages
-pnpm --filter @multiline/bridge test        # 105 tests
-pnpm --filter @multiline/panel test         # 77 tests
+pnpm --filter @multiline/bridge test
+pnpm --filter @multiline/panel test
 pnpm build
 ```
 
@@ -175,3 +182,7 @@ worth testing is deliberately kept free of I/O so it can be called directly.
 
 Design decisions are also written at the top of the file they apply to, which is
 usually the first thing worth reading in any module here.
+
+## License
+
+[MIT](LICENSE)
