@@ -1,0 +1,36 @@
+{
+  "name": "@multiline/panel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Operator Console: line operations and messaging stats",
+  "scripts": {
+    "dev": "node ../../scripts/with-port.mjs next dev",
+    "build": "next build",
+    "start": "node ../../scripts/with-port.mjs next start",
+    "typecheck": "tsc --noEmit",
+    "test": "NEXT_PUBLIC_BUSINESS_TIMEZONE=America/Regina NEXT_PUBLIC_BUSINESS_UTC_OFFSET_HOURS=-6 NEXT_PUBLIC_BUSINESS_TIMEZONE_LABEL='Regina time' NEXT_PUBLIC_DATA_STARTS=2026-09-04 NEXT_PUBLIC_AGENT_NICKNAMES=peanut=camilavance11@example.com node --import tsx --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.113.0",
+    "next": "16.3.3",
+    "ogl": "^1.0.11",
+    "pg": "^8.23.0",
+    "pnpm": "^12.3.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "3.10.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "dotenv": "^16.4.7",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

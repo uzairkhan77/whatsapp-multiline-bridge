@@ -1,0 +1,22 @@
+{
+  "name": "whatsapp-multiline-bridge",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Connect many WhatsApp numbers to one shared team inbox: an Evolution API gateway, a Chatwoot bridge with routing and failover, and an operator console",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.21.0",
+  "scripts": {
+    "db:setup": "bash infra/local/setup-db.sh",
+    "dev:bridge": "pnpm --filter @multiline/bridge dev",
+    "dev:panel": "pnpm --filter @multiline/panel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "dotenv": "^16.6.1",
+    "typescript": "^5.7.3"
+  }
+}

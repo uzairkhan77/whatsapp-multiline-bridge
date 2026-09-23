@@ -1,0 +1,518 @@
+@import 'tailwindcss';
+
+/*
+  Operator Console — design system.
+
+  The product palette: a deep blue on a cool white, orange for the one action,
+  green / amber / red for status. Fixed
+  regardless of the viewer's system theme, so a screen left open on a wall looks
+  the same for everyone. Every colour is declared here; nothing inherits from the
+  host.
+
+  Frosted panels float over a slow wave animation in the same blue; surfaces are
+  solid colours, borders are hairlines, and colour is used only where it carries
+  meaning — status, data series, the action button.
+*/
+
+@theme {
+  --color-bg: #dfe6ef;
+  --color-fg: #15181d;
+
+  --color-surface: #ffffff;
+  --color-surface-2: #e2eaf3;
+  --color-line: #dce3ea;
+
+  --color-muted: #4b5566;
+  --color-muted-2: #7d879a;
+
+  /* The one blue in the app — sidebar marker, buttons, tabs, focus rings, chart
+     lines. Same value as the product site. */
+  --color-accent: #046bd2;
+  --color-accent-2: #045cb4;
+  --color-accent-soft: #e9f2fc;
+  --color-on-accent: #ffffff;
+
+  /* The action colour is the brand blue. The site's orange is the money colour —
+     see the chart series below. */
+  --color-cta: #046bd2;
+  --color-on-cta: #ffffff;
+
+  --color-good: #15803d;
+  --color-good-soft: #ecfdf3;
+  --color-warn: #b45309;
+  --color-warn-soft: #fff7e8;
+  --color-danger: #bd0a0d;
+  --color-danger-soft: #fdf1f1;
+
+  /* Chart series. Blue is conversations and traffic; orange is the second
+     measure where one is drawn beside it; light blue is a second
+     traffic series (sent, answered). */
+  --color-chart-1: #046bd2;
+  --color-chart-2: #f97316;
+  --color-chart-3: #93c0ee;
+
+  /* Sidebar text (the sidebar is a frosted white panel; these are its greys). */
+  --color-sidebar: #ffffff;
+  --color-sidebar-2: #e9eef3;
+  --color-sidebar-fg: #15181d;
+  --color-sidebar-muted: #5b6472;
+
+  --spacing: 0.25rem;
+  /*
+    The panel's one unit of space. It is the gap between two cards side by side,
+    the gap between two cards stacked, the gap between the sidebar and the page,
+    and the margin from the page to the window — at every screen size, so nothing
+    shifts as a window is resized.
+
+    Being a --spacing-* token, every Tailwind spacing utility accepts it by name:
+    gap-gutter, mb-gutter, p-gutter, m-gutter, and so on. Nothing hard-codes it.
+    Change this one value and the whole panel re-spaces.
+  */
+  --spacing-gutter: 1rem;
+
+  --radius-card: 1.125rem;
+  --radius-control: 0.625rem;
+
+  --shadow-card: 0 1px 2px rgb(21 24 29 / 0.05), 0 14px 40px -16px rgb(4 60 130 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.8);
+  --shadow-card-hover: 0 2px 4px rgb(21 24 29 / 0.05), 0 20px 44px -18px rgb(4 107 210 / 0.28);
+  --shadow-raised: 0 30px 80px -24px rgb(21 24 29 / 0.35), 0 4px 12px rgb(21 24 29 / 0.06);
+  --shadow-accent: 0 10px 28px -10px rgb(4 107 210 / 0.5);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    /* Static blue glows under the shader, and the whole picture when the shader
+       is off (reduced motion, no WebGL). */
+    background-image:
+      radial-gradient(70rem 45rem at 10% -10%, rgb(4 107 210 / 0.12), transparent 60%),
+      radial-gradient(60rem 40rem at 100% 100%, rgb(4 107 210 / 0.06), transparent 60%);
+    background-attachment: fixed;
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    /* A notch above regular: Inter at 400 reads thin on a bright ground. */
+    font-weight: 450;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  th,
+  label,
+  dt,
+  legend {
+    font-weight: 600;
+  }
+
+  /* Every digit that sits in a column must align. Phone numbers, counts, timestamps. */
+  .tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Recharts makes the chart itself focusable so it can be read with a keyboard,
+     which means a plain mouse click focuses it too and the browser paints a ring
+     around the whole plot. Keep the ring when someone tabs to it; drop it for
+     clicks, where it is only noise. */
+  .recharts-wrapper:focus:not(:focus-visible),
+  .recharts-surface:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  button:not(:disabled),
+  a[href],
+  [role='button']:not([aria-disabled='true']),
+  label:has(> input[type='checkbox']),
+  label:has(> input[type='radio']) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: rgb(4 107 210 / 0.2);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(91 100 114 / 0.35) transparent;
+  }
+}
+
+@layer components {
+  /*
+    The frame every screen sits in: the gutter on all four sides, and by default
+    the full width beside the sidebar. One class instead of the same six utilities
+    repeated on ten pages, so the page margin and the gaps inside it can never
+    drift apart.
+
+    No cap by default. The screens this panel is read on are wide, the things on
+    them are tables and charts, and a cap only bought two empty margins. Screens
+    made of prose and form fields do want one — a 2000px-wide input is unusable —
+    so those add `.page-narrow`, which caps and centres. Nothing else varies.
+  */
+  .page {
+    margin-inline: auto;
+    max-width: var(--page-max, none);
+    padding: var(--spacing-gutter);
+  }
+  .page-narrow {
+    --page-max: 68.75rem;
+  }
+
+  /* The animated ground. Fixed behind everything; content scrolls over it. */
+  .app-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .app-backdrop::after {
+    /* Fades the waves toward the page colour at the edges so text in the
+       corners stays readable. */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(130% 100% at 50% 45%, transparent 60%, rgb(223 230 239 / 0.35) 100%),
+      linear-gradient(180deg, transparent 65%, rgb(223 230 239 / 0.4) 100%);
+  }
+
+  /*
+    The frosted panel. `.glass` is the historical name every screen already uses;
+    both names map to the same surface so nothing has to be renamed to be restyled.
+    Mostly opaque: the animation behind should only whisper through, never compete
+    with a number.
+  */
+  .card,
+  .glass {
+    position: relative;
+    background-color: rgb(239 245 252 / 0.9);
+    border: 1px solid rgb(255 255 255 / 0.95);
+    outline: 1px solid rgb(4 60 130 / 0.08);
+    outline-offset: -1px;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(26px) saturate(150%);
+    -webkit-backdrop-filter: blur(26px) saturate(150%);
+    transition:
+      box-shadow 260ms var(--ease-out-soft),
+      transform 260ms var(--ease-out-soft),
+      border-color 260ms var(--ease-out-soft),
+      background-color 260ms var(--ease-out-soft);
+  }
+
+
+  .card-hover:hover {
+    background-color: rgb(244 248 253 / 0.96);
+    border-color: rgb(4 107 210 / 0.35);
+    box-shadow:
+      var(--shadow-card-hover),
+      0 0 0 1px rgb(4 107 210 / 0.12);
+    transform: translateY(-3px);
+  }
+
+  /* The layer above the page — dialogs, popovers. Opaque enough to read on. */
+  .glass-raised {
+    background-color: rgb(241 246 252 / 0.97);
+    border: 1px solid rgb(255 255 255 / 0.95);
+    outline: 1px solid rgb(4 60 130 / 0.1);
+    outline-offset: -1px;
+    box-shadow: var(--shadow-raised);
+    backdrop-filter: blur(24px) saturate(130%);
+    -webkit-backdrop-filter: blur(24px) saturate(130%);
+  }
+
+  /* A near-solid panel for the sign-in card, where nothing should move behind the form. */
+  .card-solid {
+    background-color: rgb(244 248 253 / 0.95);
+  }
+
+
+  /* A small dark tooltip surface. */
+  .tip {
+    background-color: var(--color-fg);
+    color: #ffffff;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    box-shadow: 0 16px 40px -12px rgb(21 24 29 / 0.45);
+  }
+
+  /* The React Bits shaders paint their canvas into these boxes. */
+  .gradient-waves-container,
+  .molten-metal-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Text inputs and selects. One class, every form. */
+  .input {
+    width: 100%;
+    min-height: 2.625rem;
+    border-radius: var(--radius-control);
+    background-color: rgb(255 255 255 / 0.9);
+    border: 1px solid var(--color-line);
+    padding: 0.55rem 0.8rem;
+    font-size: 0.875rem;
+    color: var(--color-fg);
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+  .input::placeholder {
+    color: var(--color-muted-2);
+  }
+  .input:hover {
+    border-color: #c5cfdb;
+  }
+  .input:focus {
+    outline: none;
+    background-color: #ffffff;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px rgb(4 107 210 / 0.15);
+  }
+  .input:disabled {
+    background-color: var(--color-surface-2);
+    color: var(--color-muted);
+  }
+  select.input option {
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+  }
+
+  /* Native checkboxes and radios, tinted to the accent. */
+  .check {
+    accent-color: var(--color-accent);
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+
+  /* Small uppercase label used for metric captions and table headers. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Soft-tinted icon squares. */
+  .icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+    border: 1px solid rgb(21 24 29 / 0.05);
+  }
+
+  /* Callout banners. Colour comes from the modifier. */
+  .callout {
+    display: flex;
+    gap: 0.625rem;
+    align-items: flex-start;
+    border-radius: 0.75rem;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.875rem;
+    border: 1px solid transparent;
+    backdrop-filter: blur(8px);
+  }
+  .callout-danger {
+    background: rgb(253 241 241 / 0.9);
+    border-color: rgb(189 10 13 / 0.25);
+    color: #8a0709;
+  }
+  .callout-warn {
+    background: rgb(255 247 232 / 0.9);
+    border-color: rgb(180 83 9 / 0.3);
+    color: #7c3a06;
+  }
+  .callout-good {
+    background: rgb(236 253 243 / 0.9);
+    border-color: rgb(21 128 61 / 0.3);
+    color: #14532d;
+  }
+  .callout-info {
+    background: rgb(233 242 252 / 0.9);
+    border-color: rgb(4 107 210 / 0.25);
+    color: #0b4a8a;
+  }
+
+  /* Solid brand fills — kept under their historical names, but no gradients. */
+  .text-gradient {
+    color: var(--color-accent);
+  }
+  .bg-accent-gradient {
+    background-color: var(--color-accent);
+  }
+
+  /* Skeleton shimmer. */
+  /*
+    A placeholder bar. Tinted with the page's own blue rather than neutral grey,
+    and swept with a much softer highlight than it used to be: a near-opaque white
+    sweep on a light theme reads as the page flashing white, which is the one thing
+    a loading state must not do — it looks like a broken render rather than like
+    something arriving.
+  */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(4 60 130 / 0.09);
+    border-radius: 0.75rem;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+
+}
+
+/* ───────────────────────── Motion ───────────────────────── */
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 0.55;
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+    opacity: 0;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  animation: pulse-ring 2.4s ease-out infinite;
+}
+
+/*
+  Declared only inside the no-preference query, and deliberately so. `.rise` and
+  `.reveal` start from opacity 0 with a backwards fill, so anything relying on
+  them is invisible until they run. Scoping them here makes visible the default
+  and the animation the enhancement.
+
+  `.reveal` staggers by `--i` (set inline per section) so a page assembles top to
+  bottom rather than popping in all at once.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 380ms var(--ease-out-soft) both;
+  }
+  .reveal {
+    animation: rise 480ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .float {
+    animation: float 5s ease-in-out infinite;
+  }
+  dialog[open] {
+    animation: pop 220ms var(--ease-out-soft);
+  }
+  dialog[open]::backdrop {
+    animation: fade-in 220ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .reveal,
+  .float,
+  .live-dot::after,
+  .skeleton::after,
+  dialog[open],
+  dialog[open]::backdrop {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+  }
+}

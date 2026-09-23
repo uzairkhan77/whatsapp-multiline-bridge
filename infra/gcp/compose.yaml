@@ -1,0 +1,145 @@
+# The production stack. Runs on the Compute Engine VM at /opt/wa, deployed by
+# infra/gcp/deploy.sh:
+#
+#   cd /opt/wa && docker compose -f infra/gcp/compose.yaml up -d
+#
+# The repository layout is preserved on the VM, so paths here mean the same thing
+# in both places.
+#
+# Every relative path below — env_file, the Caddyfile mount —
+# resolves against this file's own directory, which is what Compose does by
+# default. Do not pass --project-directory: it moves that origin and breaks
+# both at once, with ../../.env resolving to /.env.
+#
+# Only Caddy publishes ports. Every other service is reachable on the internal
+# Docker network and nowhere else — that is what "no service exposed directly"
+# means once it stops being a sentence and becomes a configuration.
+
+name: wa
+
+services:
+  # ───────────────────────────────────────────────────────────────────────────
+  caddy:
+    # ───────────────────────────────────────────────────────────────────────────
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME account keys. This volume is the one piece of state
+      # on the box worth protecting: lose it and every certificate is reissued from
+      # scratch, which is fine once and rate-limited if it becomes a habit.
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file:
+      - ../../.env
+    depends_on:
+      - evolution
+      - bridge
+
+  # ───────────────────────────────────────────────────────────────────────────
+  evolution:
+    # ───────────────────────────────────────────────────────────────────────────
+    # Pinned to the exact version vendored for local development, so the gateway
+    # that runs in production is the one the pooling work in docs/01-evolution.md
+    # was verified against. Never :latest — an unattended image change here would
+    # move a WhatsApp session onto untested code.
+    #
+    # `evoapicloud`, not `atendai`. The project changed publishing organisation
+    # around this version — the same reorganisation the vendored commit fa09d378
+    # records. `atendai/evolution-api` still exists but stops at v2.2.3, so the
+    # obvious-looking image name would silently pin the gateway two minor versions
+    # behind everything that was tested.
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: unless-stopped
+    # Its own env file, mirroring infra/local/evolution.env locally. Evolution has
+    # around forty settings whose names are pinned against its source; keeping them
+    # separate stops them being confused with our own services' configuration.
+    env_file:
+      - ../../evolution.env
+    volumes:
+      # Temporary media staging only. Session and instance state live in the
+      # dedicated Supabase project, which is what makes a container restart
+      # reconnect rather than ask for a fresh QR.
+      - evolution_instances:/evolution/instances
+    # No `ports`. Evolution's API can log a live number out, so it reaches the
+    # outside world only through Caddy's IP-allowlisted gateway hostname.
+    expose:
+      - "8080"
+    healthcheck:
+      # Exists so the bridge can wait for readiness rather than for the container
+      # merely having started. Evolution runs Prisma migrations against Supabase
+      # before it listens, which takes a few seconds — long enough that the bridge
+      # used to lose the race and fail to register its webhooks.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      # Generous: the first start also runs migrations, and a slow one that gets
+      # killed halfway is worse than one that takes a while.
+      start_period: 90s
+      retries: 5
+
+  # ───────────────────────────────────────────────────────────────────────────
+  bridge:
+    # ───────────────────────────────────────────────────────────────────────────
+    # Built by GitHub Actions on every push to main and pulled here — never built
+    # on this machine. It is an e2-small, and compiling next to a live WhatsApp
+    # gateway was the one step of a deploy that could run it out of memory. See
+    # .github/workflows/bridge-image.yml. The tag is `latest` unless deploy.sh
+    # was given one (`--tag sha-abc1234`), which is how a rollback works.
+    #
+    # GHCR_OWNER is the GitHub user or organisation the image was pushed under,
+    # lower-cased — set it in .env beside the rest of the configuration.
+    image: ghcr.io/${GHCR_OWNER}/multiline-bridge:${BRIDGE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      # Inside the network Evolution is a service name, not localhost. This
+      # overrides whatever .env says, because .env's value is the one development
+      # uses and both files are the same file.
+      EVOLUTION_BASE_URL: http://evolution:8080
+      # Where the bridge tells Evolution to post. Must be the public hostname, not
+      # the container name: Chatwoot Cloud posts to the same host from outside.
+      BRIDGE_PUBLIC_URL: https://${WA_BRIDGE_HOST}
+    # No config mount. Which line feeds which inbox lives in bridge.lines, read
+    # from the database and re-read every 30 seconds — so adding a line is a row,
+    # not a file edit followed by a redeploy of two separate services.
+    expose:
+      - "3001"
+    depends_on:
+      evolution:
+        # Not a plain `- evolution`, which waits only for the container to start.
+        # The bridge registers every line's webhook with Evolution once, at boot,
+        # and only logs a failure — so losing that race leaves the bridge running
+        # and healthy with no webhooks registered, and inbound messages silently
+        # never arrive. Waiting for healthy is what makes boot order real.
+        condition: service_healthy
+    healthcheck:
+      # Hits the database as well as the process, so an unreachable Supabase shows
+      # up here rather than as a puzzling failure on the next customer message.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Slot: the Operator Console, if self-hosted rather than deployed to Vercel.
+  # ───────────────────────────────────────────────────────────────────────────
+  # panel:
+  #   build:
+  #     context: ../..
+  #     dockerfile: apps/operator-console/Dockerfile
+  #   restart: unless-stopped
+  #   env_file:
+  #     - ../../.env
+  #   expose:
+  #     - "3000"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  evolution_instances:

@@ -1,0 +1,78 @@
+# Build the bridge's container image here, not on the VM.
+#
+# The VM is an e2-small: two shared vCPUs and 2 GB, sized for running two
+# containers, not for compiling TypeScript and installing a dependency tree
+# next to a live WhatsApp gateway. A build there competed with Evolution for
+# the whole machine and was the one step of a deploy that could run out of
+# memory. So the image is built on every push to main, pushed to the GitHub
+# Container Registry, and infra/gcp/deploy.sh only pulls it.
+#
+# Building is automatic; deploying is not. Nothing reaches the production VM
+# until somebody runs deploy.sh — the same rule the panel follows on Vercel.
+#
+# If the package is private, the VM needs a one-time `docker login ghcr.io`
+# with a token that has read:packages and nothing more.
+
+name: bridge image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - services/bridge/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/bridge-image.yml
+  workflow_dispatch:
+
+# One build at a time, and a push that lands mid-build waits rather than
+# cancelling it: `latest` should always be a commit that finished building.
+concurrency:
+  group: bridge-image
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Two tags per build: `latest` for the ordinary deploy, and the commit's
+      # short SHA so a specific build can be deployed or rolled back to
+      # (`deploy.sh --tag sha-abc1234`). Lower-cased because the registry
+      # refuses capitals and an owner's name may have them.
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/multiline-bridge
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+
+      - uses: docker/build-push-action@v6
+        with:
+          # The repository root, as the Dockerfile expects: the lockfile and the
+          # workspace manifest live there.
+          context: .
+          file: services/bridge/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache between runs, so a source-only change skips the
+          # dependency install the same way it does locally.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

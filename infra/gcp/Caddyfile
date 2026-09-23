@@ -1,0 +1,117 @@
+# Caddy is the single public entry point on 443. Nothing else on the box publishes
+# a port: the gateway, the bridge and the panel are reachable
+# only from inside the Docker network.
+#
+# Every hostname is an environment variable with a default, so pointing this at a
+# real domain later is three value changes in /opt/wa/.env and a reload — not an
+# edit to this file.
+#
+# The defaults are sslip.io hostnames. sslip.io resolves any name of the form
+# <anything>.<ip>.sslip.io to that IP, which means Let's Encrypt can issue a real,
+# publicly trusted certificate for it with no domain purchased and no DNS to
+# configure. That matters more than convenience here: Chatwoot Cloud will refuse
+# to deliver a webhook to a self-signed certificate, so without this the inbound
+# half of the bridge could not be tested on this box at all.
+#
+# It is an interim, not a destination. A real domain is still what ships.
+{
+	# Certificates are issued and renewed automatically. Nothing to do at renewal
+	# time, which is the point — a manual renewal is a manual renewal that gets
+	# missed.
+	#
+	# No `email` is set. Let's Encrypt accepts an account without one; the cost is
+	# no expiry warnings by mail, which matters little when renewal is automatic and
+	# uptime monitoring watches the endpoint anyway. Add `email you@example.com`
+	# here if you want them.
+	#
+	# Uncomment to test certificate issuance against Let's Encrypt's staging
+	# environment, which has far looser rate limits. The certificates it issues are
+	# untrusted by design — use it to prove the plumbing, then comment it out again.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Applied to every site below. Not defence in depth so much as removing the easy
+# mistakes: no framing, no MIME sniffing, and no advertising what is running here.
+(baseline) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gateway administration
+# ─────────────────────────────────────────────────────────────────────────────
+# Evolution's own API. These controls create instances, show QR codes and — the
+# reason this host is restricted — log a number out. A logged-out number is a
+# sales line that has stopped receiving customer messages until someone notices
+# and re-scans a QR, so this is the one hostname that must never be open.
+{$WA_GATEWAY_HOST} {
+	import baseline
+
+	# The allowlist is a Caddy placeholder holding a space-separated list of
+	# addresses or CIDR ranges, e.g. "203.0.113.7 198.51.100.0/24".
+	#
+	# It defaults to 127.0.0.1 — that is, nobody, since no external request can
+	# arrive from loopback. A misconfigured allowlist therefore locks everyone out
+	# rather than letting everyone in, which is the failure that can be noticed and
+	# fixed rather than the one that cannot.
+	#
+	# Caddy is the edge here, so remote_ip is the real client address. There is no
+	# proxy in front whose forwarded header could be spoofed.
+	@denied not remote_ip {$WA_ADMIN_ALLOWLIST:127.0.0.1}
+	respond @denied "Not permitted from this address." 403
+
+	reverse_proxy evolution:8080
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The bridge's webhooks
+# ─────────────────────────────────────────────────────────────────────────────
+# Both live on this hostname because both are machine-to-machine endpoints with no
+# human audience. It is the address Evolution and Chatwoot post to.
+{$WA_BRIDGE_HOST} {
+	import baseline
+
+	# Chatwoot posts here when an agent replies. Authentication is the shared secret
+	# in the query string, checked by the bridge — Chatwoot's inbox webhooks cannot
+	# send custom headers, so it cannot ride anywhere better.
+	handle /webhooks/chatwoot* {
+		reverse_proxy bridge:3001
+	}
+
+	# Evolution posts here when a customer writes. This is container-to-container
+	# traffic that never leaves the box, but it goes through Caddy anyway so that
+	# one webhook URL works whether Evolution is local or moves elsewhere later.
+	handle /webhooks/evolution/* {
+		reverse_proxy bridge:3001
+	}
+
+	# Public so that uptime checks can reach it without credentials.
+	#
+	# Worth knowing: this response lists every configured line — instance names,
+	# Chatwoot inbox ids, enabled or not. No secrets, but it is internal
+	# configuration, readable by anyone who finds the URL. Worth deciding whether
+	# the uptime check should authenticate and this should be trimmed to a bare
+	# "ok" before it is exposed anywhere sensitive.
+	handle /health {
+		reverse_proxy bridge:3001
+	}
+	}
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Operator Console
+# ─────────────────────────────────────────────────────────────────────────────
+# The only hostname with a human audience, and the only one with its own login
+# platform, so no allowlist here — access is the panel's own concern.
+{$WA_PANEL_HOST} {
+	import baseline
+
+	# ── Slot: the Operator Console, if self-hosted rather than on Vercel. ──
+	# reverse_proxy panel:3000
+	respond "Operator Console is not deployed yet." 503
+}

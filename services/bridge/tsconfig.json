@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  // The code only. The tests live in test/, which mirrors src/ folder for folder,
+  // and are typechecked by `pnpm typecheck` (tsconfig.typecheck.json) — kept out
+  // of here so the runtime image never carries them.
+  "include": ["src/**/*.ts"]
+}

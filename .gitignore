@@ -1,0 +1,34 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+# TypeScript incremental build cache — machine-local, changes on every build.
+*.tsbuildinfo
+
+# Secrets — never committed. Only .env.example is tracked.
+.env
+.env.*
+!.env.example
+# Prefixed env files too (infra/local/evolution.env), which .env.* does not match.
+*.env
+!*.env.example
+
+# Local runtime state
+*.log
+logs/
+.tmp/
+.DS_Store
+
+# Evolution local instance/media files (when RUN_LOCAL storage is used)
+instances/
+store/
+
+# Vendored upstream checkout — cloned locally, not tracked here.
+vendor/
+.vercel
+
+# Editor and tooling state — machine-specific, not part of the project.
+.idea/
+.vscode/
+AGENTS.md

@@ -1,0 +1,7 @@
+// Everything, tests included. tsconfig.json builds src/ alone so the tests stay
+// out of dist; a type error in a test is still a type error, so it is caught here.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "rootDir": "." },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
